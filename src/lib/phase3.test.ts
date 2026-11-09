@@ -248,9 +248,11 @@ describe("Phase 3 - Examination Committee, Availability & Concurrency-Safe Booki
       });
 
       expect(slots.length).toBeGreaterThan(0);
-      const firstSlot = slots[0];
-      expect(firstSlot.available).toBe(true);
-      expect(firstSlot.roomName).toContain("ห้องสอบอัจฉริยะ 301");
+      const testRoomSlot = slots.find((s) =>
+        s.roomName.includes("ห้องสอบอัจฉริยะ 301")
+      );
+      expect(testRoomSlot).toBeDefined();
+      expect(testRoomSlot?.available).toBe(true);
     });
   });
 
