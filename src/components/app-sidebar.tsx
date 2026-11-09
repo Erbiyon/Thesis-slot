@@ -20,6 +20,9 @@ import {
   ChevronRight,
   Menu,
   X,
+  FolderGit2,
+  Mail,
+  ClipboardCheck,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -50,6 +53,26 @@ export function AppSidebar({ user, role }: SidebarProps) {
       icon: LayoutDashboard,
       roles: ["ADMIN", "ACADEMIC_STAFF", "FACULTY", "STUDENT"],
     },
+    // Phase 2 Nav Items
+    {
+      title: "โครงงาน / วิทยานิพนธ์",
+      href: "/projects",
+      icon: FolderGit2,
+      roles: ["ADMIN", "ACADEMIC_STAFF", "FACULTY", "STUDENT"],
+    },
+    {
+      title: "คำขออาจารย์ที่ปรึกษา",
+      href: "/faculty/advisor-requests",
+      icon: Mail,
+      roles: ["ADMIN", "FACULTY"],
+    },
+    {
+      title: "ตรวจสอบคำขอลงทะเบียน",
+      href: "/academic/project-reviews",
+      icon: ClipboardCheck,
+      roles: ["ADMIN", "ACADEMIC_STAFF"],
+    },
+    // Phase 1 Master Data
     {
       title: "ปีการศึกษา",
       href: "/academic/years",
@@ -124,7 +147,8 @@ export function AppSidebar({ user, role }: SidebarProps) {
         </p>
         {filteredNav.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}

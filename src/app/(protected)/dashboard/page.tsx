@@ -12,30 +12,71 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
+  FolderGit2,
   Calendar,
-  CalendarDays,
   GraduationCap,
   DoorOpen,
   Users,
   ShieldCheck,
   CheckCircle2,
   ArrowRight,
+  Clock,
+  ClipboardCheck,
+  Mail,
+  AlertCircle,
 } from "lucide-react";
 
 export default async function DashboardPage() {
   const { user, role } = await requireAuth();
 
-  // Load genuine Phase 1 metrics based on permissions
-  const [programCount, yearCount, termCount, roomCount, userCount] =
-    await Promise.all([
-      prisma.academicProgram.count({ where: { isActive: true } }),
-      prisma.academicYear.count({ where: { isActive: true } }),
-      prisma.academicTerm.count({ where: { isActive: true } }),
-      prisma.examinationRoom.count({ where: { isActive: true } }),
-      role === "ADMIN"
-        ? prisma.user.count({ where: { isActive: true } })
-        : null,
-    ]);
+  // Parallel fetching without waterfalls (Vercel React Best Practices)
+  const [
+    programCount,
+    yearCount,
+    termCount,
+    roomCount,
+    userCount,
+    myProjectsCount,
+    submittedReviewsCount,
+    pendingAdvisorRequestsCount,
+    needsRevisionCount,
+  ] = await Promise.all([
+    prisma.academicProgram.count({ where: { isActive: true } }),
+    prisma.academicYear.count({ where: { isActive: true } }),
+    prisma.academicTerm.count({ where: { isActive: true } }),
+    prisma.examinationRoom.count({ where: { isActive: true } }),
+    role === "ADMIN" ? prisma.user.count({ where: { isActive: true } }) : null,
+
+    // Student metrics
+    role === "STUDENT"
+      ? prisma.academicProject.count({ where: { createdByUserId: user.id } })
+      : null,
+
+    // Staff metrics
+    role === "ACADEMIC_STAFF" || role === "ADMIN"
+      ? prisma.academicProject.count({ where: { reviewStatus: "SUBMITTED" } })
+      : null,
+
+    // Faculty metrics
+    role === "FACULTY"
+      ? prisma.advisorRequest.count({
+          where: {
+            facultyProfile: { userId: user.id },
+            status: "PENDING",
+          },
+        })
+      : null,
+
+    // Revision required metrics (for students)
+    role === "STUDENT"
+      ? prisma.academicProject.count({
+          where: {
+            createdByUserId: user.id,
+            reviewStatus: "REVISION_REQUIRED",
+          },
+        })
+      : null,
+  ]);
 
   const roleTitles = {
     ADMIN: "ภาพรวมการบริหารระบบ",
@@ -65,13 +106,34 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/profile">ข้อมูลส่วนตัว</Link>
-          </Button>
-          {(role === "ADMIN" || role === "ACADEMIC_STAFF") && (
+          {role === "STUDENT" && (
             <Button size="sm" asChild>
-              <Link href="/academic/programs">
-                จัดการข้อมูลวิชาการ
+              <Link href="/projects/new">
+                ลงทะเบียนหัวข้อใหม่
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          )}
+          {role === "ACADEMIC_STAFF" && (
+            <Button size="sm" asChild>
+              <Link href="/academic/project-reviews">
+                ตรวจสอบคำขอลงทะเบียน
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          )}
+          {role === "FACULTY" && (
+            <Button size="sm" asChild>
+              <Link href="/faculty/advisor-requests">
+                ดูคำขอที่ปรึกษา
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          )}
+          {role === "ADMIN" && (
+            <Button size="sm" asChild>
+              <Link href="/admin/users">
+                จัดการผู้ใช้งาน
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -79,9 +141,142 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Genuine Phase 1 Metric Cards */}
+      {/* Student Highlight Cards */}
+      {role === "STUDENT" && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                โครงงานของฉัน
+              </CardTitle>
+              <FolderGit2 className="h-4 w-4 text-zinc-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {myProjectsCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                โครงงานที่คุณเป็นผู้สร้างหรือสมาชิก
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                ต้องแก้ไขตามข้อเสนอแนะ
+              </CardTitle>
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {needsRevisionCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                คำขอที่ส่งกลับเพื่อให้นักศึกษาปรับปรุง
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                หลักสูตรที่เปิดรับ
+              </CardTitle>
+              <GraduationCap className="h-4 w-4 text-zinc-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {programCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                หลักสูตรที่เปิดใช้งานในระบบ
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Faculty Highlight Cards */}
+      {role === "FACULTY" && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                คำขอที่ปรึกษาที่รอการตอบรับ
+              </CardTitle>
+              <Clock className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {pendingAdvisorRequestsCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                คำขอจากกลุ่มนักศึกษาที่รอคุณพิจารณา
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                โครงงานที่รับเป็นที่ปรึกษา
+              </CardTitle>
+              <FolderGit2 className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="link"
+                className="h-auto p-0 text-base font-bold"
+                asChild
+              >
+                <Link href="/projects">ดูรายการโครงงานทั้งหมด →</Link>
+              </Button>
+              <p className="text-muted-foreground mt-1 text-xs">
+                เข้าสู่หน้ารายการโครงงานในความดูแล
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                ห้องสอบที่พร้อมใช้
+              </CardTitle>
+              <DoorOpen className="h-4 w-4 text-zinc-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {roomCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                ห้องสอบที่ลงทะเบียนในระบบ
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Staff & Admin Highlight Cards */}
       {(role === "ADMIN" || role === "ACADEMIC_STAFF") && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                คำขอที่รอการตรวจสอบ
+              </CardTitle>
+              <ClipboardCheck className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {submittedReviewsCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                คำขอลงทะเบียนที่ยื่นเข้ามา
+              </p>
+            </CardContent>
+          </Card>
+
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
@@ -102,30 +297,17 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                ปีการศึกษาที่เปิดใช้งาน
+                ปีการศึกษา / ภาคเรียน
               </CardTitle>
               <Calendar className="h-4 w-4 text-zinc-500" />
             </CardHeader>
             <CardContent>
               <div className="text-foreground text-2xl font-bold">
-                {yearCount}
+                {yearCount} / {termCount}
               </div>
-              <p className="text-muted-foreground mt-1 text-xs">ปีการศึกษา</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-muted-foreground text-sm font-medium">
-                ภาคการศึกษาที่เปิดใช้งาน
-              </CardTitle>
-              <CalendarDays className="h-4 w-4 text-zinc-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-foreground text-2xl font-bold">
-                {termCount}
-              </div>
-              <p className="text-muted-foreground mt-1 text-xs">ภาคการศึกษา</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                ปีการศึกษา และภาคเรียนที่เปิดใช้งาน
+              </p>
             </CardContent>
           </Card>
 
@@ -188,11 +370,14 @@ export default async function DashboardPage() {
               <div className="border-border bg-muted/20 flex flex-col justify-between rounded-lg border p-4">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <GraduationCap className="h-4 w-4 text-zinc-600" />
-                    ข้อมูลหลักสูตรและวิชาการ
+                    <ClipboardCheck className="h-4 w-4 text-zinc-600" />
+                    ตรวจสอบคำขอลงทะเบียน
                   </div>
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    กำหนดและปรับปรุงข้อมูลปีการศึกษา ภาคเรียน และห้องสอบ
+                  <p className="text-foreground mt-2 text-2xl font-bold">
+                    {submittedReviewsCount}
+                  </p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    คำขอลงทะเบียนโครงงานที่รอการพิจารณา
                   </p>
                 </div>
                 <Button
@@ -201,7 +386,9 @@ export default async function DashboardPage() {
                   className="mt-4 w-full"
                   asChild
                 >
-                  <Link href="/academic/programs">เข้าสู่เมนูวิชาการ</Link>
+                  <Link href="/academic/project-reviews">
+                    เข้าสู่หน้าตรวจสอบคำขอ
+                  </Link>
                 </Button>
               </div>
 
@@ -232,11 +419,12 @@ export default async function DashboardPage() {
       {role === "ACADEMIC_STAFF" && (
         <Card className="border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              ทางลัดการจัดการข้อมูลวิชาการ
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <ClipboardCheck className="h-5 w-5 text-zinc-600" />
+              การจัดการข้อมูลวิชาการและการตรวจสอบโครงงาน
             </CardTitle>
             <CardDescription>
-              เตรียมความพร้อมข้อมูลพื้นฐานสำหรับรอบการจัดสอบโครงงานและวิทยานิพนธ์
+              ตรวจสอบคำขอลงทะเบียนและจัดการข้อมูลพื้นฐานสำหรับการจัดสอบ
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
@@ -245,22 +433,10 @@ export default async function DashboardPage() {
               className="flex h-auto flex-col items-start gap-1 py-4"
               asChild
             >
-              <Link href="/academic/years">
-                <span className="text-sm font-semibold">ปีการศึกษา</span>
+              <Link href="/academic/project-reviews">
+                <span className="text-sm font-semibold">ตรวจสอบคำขอ</span>
                 <span className="text-muted-foreground text-xs font-normal">
-                  จัดการปีการศึกษา
-                </span>
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              className="flex h-auto flex-col items-start gap-1 py-4"
-              asChild
-            >
-              <Link href="/academic/terms">
-                <span className="text-sm font-semibold">ภาคการศึกษา</span>
-                <span className="text-muted-foreground text-xs font-normal">
-                  กำหนดภาคเรียนย่อย
+                  พิจารณาโครงงาน ({submittedReviewsCount})
                 </span>
               </Link>
             </Button>
@@ -272,7 +448,19 @@ export default async function DashboardPage() {
               <Link href="/academic/programs">
                 <span className="text-sm font-semibold">หลักสูตร</span>
                 <span className="text-muted-foreground text-xs font-normal">
-                  รายชื่อหลักสูตรและสาขา
+                  รายชื่อหลักสูตร ({programCount})
+                </span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex h-auto flex-col items-start gap-1 py-4"
+              asChild
+            >
+              <Link href="/academic/terms">
+                <span className="text-sm font-semibold">ภาคการศึกษา</span>
+                <span className="text-muted-foreground text-xs font-normal">
+                  กำหนดภาคเรียนย่อย ({termCount})
                 </span>
               </Link>
             </Button>
@@ -284,7 +472,7 @@ export default async function DashboardPage() {
               <Link href="/academic/rooms">
                 <span className="text-sm font-semibold">ห้องสอบ</span>
                 <span className="text-muted-foreground text-xs font-normal">
-                  กำหนดห้องและอาคาร
+                  กำหนดห้องและอาคาร ({roomCount})
                 </span>
               </Link>
             </Button>
@@ -292,29 +480,29 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {(role === "FACULTY" || role === "STUDENT") && (
+      {role === "FACULTY" && (
         <Card className="border-border shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">
-              สถานะข้อมูลวิชาการปัจจุบัน
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+              <Mail className="h-5 w-5 text-zinc-600" />
+              ภารกิจอาจารย์ที่ปรึกษา (Advisor Management)
             </CardTitle>
             <CardDescription>
-              ข้อมูลอ้างอิงสำหรับการสอบโครงงานและวิทยานิพนธ์ในภาคการศึกษาปัจจุบัน
+              ตรวจสอบคำขอจากนักศึกษาและดูรายการโครงงานในความดูแล
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border-border bg-muted/20 rounded-lg border p-4">
-              <p className="text-foreground text-sm font-medium">
-                ระบบข้อมูลหลัก (Academic Master Data)
-                ได้รับการจัดเตรียมเรียบร้อยแล้ว
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                ฟังก์ชันการยื่นขอสอบและการเลือกกรรมการสอบจะเปิดให้ดำเนินการในเฟสถัดไปหลังจากได้รับการอนุมัติรอบการสอบจากเจ้าหน้าที่วิชาการ
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button size="sm" variant="outline" asChild>
-                <Link href="/profile">ตรวจสอบข้อมูลส่วนตัว</Link>
+            <div className="border-border bg-muted/20 flex flex-col items-center justify-between gap-3 rounded-lg border p-4 sm:flex-row">
+              <div>
+                <p className="text-foreground text-sm font-medium">
+                  คำขอเป็นอาจารย์ที่ปรึกษาที่รอการตอบรับ
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  มี {pendingAdvisorRequestsCount} คำขอที่รอดำเนินการ
+                </p>
+              </div>
+              <Button size="sm" asChild>
+                <Link href="/faculty/advisor-requests">พิจารณาคำขอ</Link>
               </Button>
             </div>
           </CardContent>

@@ -14,22 +14,29 @@ datasource db {
 // -----------------------------------------------------------------------------
 
 model User {
-  id             String          @id @default(cuid())
-  name           String          @db.VarChar(255)
-  email          String          @unique @db.VarChar(255)
-  emailVerified  Boolean         @default(false)
-  image          String?         @db.Text
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  role           String?         @default("STUDENT") @db.VarChar(50)
-  banned         Boolean?        @default(false)
-  banReason      String?         @db.Text
+  id             String           @id @default(cuid())
+  name           String           @db.VarChar(255)
+  email          String           @unique @db.VarChar(255)
+  emailVerified  Boolean          @default(false)
+  image          String?          @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  role           String?          @default("STUDENT") @db.VarChar(50)
+  banned         Boolean?         @default(false)
+  banReason      String?          @db.Text
   banExpires     DateTime?
-  isActive       Boolean         @default(true)
+  isActive       Boolean          @default(true)
   sessions       Session[]
   accounts       Account[]
   studentProfile StudentProfile?
   facultyProfile FacultyProfile?
+
+  // Phase 2 Relations
+  createdProjects    AcademicProject[]   @relation("ProjectCreator")
+  invitedMemberships ProjectMember[]     @relation("MemberInviter")
+  advisorRequests    AdvisorRequest[]    @relation("AdvisorRequester")
+  projectReviews     ProjectReview[]     @relation("ProjectReviewer")
+  projectActivities  ProjectActivity[]   @relation("ProjectActor")
 
   @@map("user")
 }
@@ -96,6 +103,7 @@ model AcademicProgram {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   studentProfiles StudentProfile[]
+  projects        AcademicProject[]
 
   @@map("academic_program")
 }
@@ -112,16 +120,17 @@ model AcademicYear {
 }
 
 model AcademicTerm {
-  id             String       @id @default(cuid())
-  academicYearId String       @db.VarChar(255)
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  termCode       String       @db.VarChar(10) // e.g. "1", "2", "3" (summer)
-  nameTh         String       @db.VarChar(100) // e.g. "ภาคการศึกษาที่ 1"
-  startDate      DateTime?    @db.Date
-  endDate        DateTime?    @db.Date
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id             String            @id @default(cuid())
+  academicYearId String            @db.VarChar(255)
+  academicYear   AcademicYear      @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  termCode       String            @db.VarChar(10) // e.g. "1", "2", "3" (summer)
+  nameTh         String            @db.VarChar(100) // e.g. "ภาคการศึกษาที่ 1"
+  startDate      DateTime?         @db.Date
+  endDate        DateTime?         @db.Date
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  projects       AcademicProject[]
 
   @@unique([academicYearId, termCode])
   @@index([academicYearId])
@@ -143,28 +152,168 @@ model ExaminationRoom {
 }
 
 model StudentProfile {
-  id                String           @id @default(cuid())
-  userId            String           @unique @db.VarChar(255)
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studentCode       String           @unique @db.VarChar(50)
-  academicProgramId String?          @db.VarChar(255)
-  academicProgram   AcademicProgram? @relation(fields: [academicProgramId], references: [id], onDelete: SetNull)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id                String            @id @default(cuid())
+  userId            String            @unique @db.VarChar(255)
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentCode       String            @unique @db.VarChar(50)
+  academicProgramId String?           @db.VarChar(255)
+  academicProgram   AcademicProgram?  @relation(fields: [academicProgramId], references: [id], onDelete: SetNull)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  projectMemberships ProjectMember[]
 
   @@index([academicProgramId])
   @@map("student_profile")
 }
 
 model FacultyProfile {
-  id         String   @id @default(cuid())
-  userId     String   @unique @db.VarChar(255)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  staffCode  String?  @unique @db.VarChar(50)
-  department String?  @db.VarChar(255)
-  titleTh    String?  @db.VarChar(100) // e.g. "ผศ.ดร.", "อ."
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String           @id @default(cuid())
+  userId          String           @unique @db.VarChar(255)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffCode       String?          @unique @db.VarChar(50)
+  department      String?          @db.VarChar(255)
+  titleTh         String?          @db.VarChar(100) // e.g. "ผศ.ดร.", "อ."
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  advisorRequests AdvisorRequest[]
 
   @@map("faculty_profile")
+}
+
+// -----------------------------------------------------------------------------
+// Phase 2: Project Registration, Student Groups & Advisor Management
+// -----------------------------------------------------------------------------
+
+enum ProjectType {
+  PROJECT // โครงงานพิเศษ / โครงงานวิศวกรรม
+  THESIS  // วิทยานิพนธ์
+}
+
+enum ProjectReviewStatus {
+  DRAFT              // ฉบับร่าง
+  SUBMITTED          // ยื่นคำขอลงทะเบียนแล้ว รอการตรวจสอบ
+  REVISION_REQUIRED  // ส่งกลับเพื่อแก้ไข
+  APPROVED           // อนุมัติการลงทะเบียนเรียบร้อย
+  REJECTED           // ปฏิเสธคำขอ
+  ARCHIVED           // จัดเก็บประวัติ
+}
+
+enum MemberRole {
+  LEADER // หัวหน้ากลุ่ม / ผู้เสนอหัวข้อ
+  MEMBER // สมาชิกกลุ่ม
+}
+
+enum MembershipStatus {
+  INVITED   // รอการตอบรับคำเชิญ
+  ACCEPTED  // ตอบรับเข้าร่วมกลุ่มแล้ว
+  DECLINED  // ปฏิเสธคำเชิญ
+  CANCELLED // ยกเลิกคำเชิญโดยหัวหน้ากลุ่ม
+}
+
+enum AdvisorRequestStatus {
+  PENDING   // รออาจารย์ตอบรับ
+  ACCEPTED  // อาจารย์ตอบรับเป็นที่ปรึกษาแล้ว
+  DECLINED  // อาจารย์ปฏิเสธคำขอ
+  CANCELLED // ยกเลิกคำขอโดยหัวหน้ากลุ่ม
+}
+
+model AcademicProject {
+  id                String              @id @default(cuid())
+  projectType       ProjectType         @default(PROJECT)
+  titleTh           String              @db.VarChar(500)
+  titleEn           String?             @db.VarChar(500)
+  abstractTh        String?             @db.Text
+  academicProgramId String              @db.VarChar(255)
+  academicProgram   AcademicProgram     @relation(fields: [academicProgramId], references: [id], onDelete: Restrict)
+  academicTermId    String              @db.VarChar(255)
+  academicTerm      AcademicTerm        @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  createdByUserId   String              @db.VarChar(255)
+  creator           User                @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reviewStatus      ProjectReviewStatus @default(DRAFT)
+  submittedAt       DateTime?
+  approvedAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  members         ProjectMember[]
+  advisorRequests AdvisorRequest[]
+  reviews         ProjectReview[]
+  activities      ProjectActivity[]
+
+  @@index([academicProgramId])
+  @@index([academicTermId])
+  @@index([createdByUserId])
+  @@index([reviewStatus])
+  @@map("academic_project")
+}
+
+model ProjectMember {
+  id               String           @id @default(cuid())
+  projectId        String           @db.VarChar(255)
+  project          AcademicProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  studentProfileId String           @db.VarChar(255)
+  studentProfile   StudentProfile   @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  memberRole       MemberRole       @default(MEMBER)
+  membershipStatus MembershipStatus @default(INVITED)
+  invitedByUserId  String           @db.VarChar(255)
+  inviter          User             @relation("MemberInviter", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+  respondedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([projectId, studentProfileId])
+  @@index([projectId])
+  @@index([studentProfileId])
+  @@index([membershipStatus])
+  @@map("project_member")
+}
+
+model AdvisorRequest {
+  id                 String               @id @default(cuid())
+  projectId          String               @db.VarChar(255)
+  project            AcademicProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  facultyProfileId   String               @db.VarChar(255)
+  facultyProfile     FacultyProfile       @relation(fields: [facultyProfileId], references: [id], onDelete: Cascade)
+  requestedByUserId  String               @db.VarChar(255)
+  requester          User                 @relation("AdvisorRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  status             AdvisorRequestStatus @default(PENDING)
+  responseReason     String?              @db.Text
+  respondedAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([projectId])
+  @@index([facultyProfileId])
+  @@index([status])
+  @@map("advisor_request")
+}
+
+model ProjectReview {
+  id               String              @id @default(cuid())
+  projectId        String              @db.VarChar(255)
+  project          AcademicProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reviewedByUserId String              @db.VarChar(255)
+  reviewer         User                @relation("ProjectReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  decision         ProjectReviewStatus
+  comment          String?             @db.Text
+  createdAt        DateTime            @default(now())
+
+  @@index([projectId])
+  @@index([reviewedByUserId])
+  @@map("project_review")
+}
+
+model ProjectActivity {
+  id          String          @id @default(cuid())
+  projectId   String          @db.VarChar(255)
+  project     AcademicProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorUserId String          @db.VarChar(255)
+  actor       User            @relation("ProjectActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  action      String          @db.VarChar(100)
+  details     String?         @db.Text
+  createdAt   DateTime        @default(now())
+
+  @@index([projectId])
+  @@index([actorUserId])
+  @@map("project_activity")
 }

@@ -1,4 +1,5 @@
 # Phase 1: การยืนยันตัวตน, การควบคุมสิทธิ์ตามบทบาท และข้อมูลหลักวิชาการ
+
 (Authentication, Role-Based Access Control, Academic Master Data & Role-Based Dashboard)
 
 เอกสารฉบับนี้สรุปผลการพัฒนาสถาปัตยกรรมระบบใน **Phase 1** ของโครงการ **ThesisSlot (ระบบจองสอบโครงงานและวิทยานิพนธ์)**
@@ -18,19 +19,21 @@
 ## 2. บทบาทหน้าที่ในระบบ (User Roles) และตารางสิทธิ์ (Permission Matrix)
 
 ระบบแบ่งออกเป็น 4 บทบาทหลัก:
+
 - `ADMIN`: **ผู้ดูแลระบบ** — จัดการบัญชีผู้ใช้ กำหนดบทบาท ระงับการใช้งาน และเข้าถึงข้อมูลวิชาการ
 - `ACADEMIC_STAFF`: **เจ้าหน้าที่วิชาการ** — จัดการปีการศึกษา ภาคเรียน หลักสูตร และห้องสอบ
 - `FACULTY`: **อาจารย์** — เข้าถึงแดชบอร์ดอาจารย์ ดูข้อมูลอ้างอิงทางวิชาการ และแก้ไขข้อมูลส่วนตัว
 - `STUDENT`: **นักศึกษา** — เข้าถึงแดชบอร์ดนักศึกษา ดูข้อมูลอ้างอิง และแก้ไขข้อมูลส่วนตัว/รหัสนักศึกษา
 
 ### ตารางสิทธิ์การเข้าถึง (Permission Matrix)
-| สิทธิ์การใช้งาน (Permission) | ADMIN | ACADEMIC_STAFF | FACULTY | STUDENT |
-| :--- | :---: | :---: | :---: | :---: |
-| `admin:access` (เข้าถึงเมนูผู้ดูแลระบบ) | ✅ | ❌ | ❌ | ❌ |
-| `users:manage` (สร้าง/เปลี่ยนสิทธิ์/ระงับบัญชี) | ✅ | ❌ | ❌ | ❌ |
-| `academic:manage` (สร้าง/แก้ไข/เปิด-ปิดข้อมูลวิชาการ) | ✅ | ✅ | ❌ | ❌ |
-| `academic:view` (ดูข้อมูลปีการศึกษา/หลักสูตร/ห้องสอบ) | ✅ | ✅ | ✅ | ✅ |
-| `profile:view_self` / `profile:update_self` | ✅ | ✅ | ✅ | ✅ |
+
+| สิทธิ์การใช้งาน (Permission)                          | ADMIN | ACADEMIC_STAFF | FACULTY | STUDENT |
+| :---------------------------------------------------- | :---: | :------------: | :-----: | :-----: |
+| `admin:access` (เข้าถึงเมนูผู้ดูแลระบบ)               |  ✅   |       ❌       |   ❌    |   ❌    |
+| `users:manage` (สร้าง/เปลี่ยนสิทธิ์/ระงับบัญชี)       |  ✅   |       ❌       |   ❌    |   ❌    |
+| `academic:manage` (สร้าง/แก้ไข/เปิด-ปิดข้อมูลวิชาการ) |  ✅   |       ✅       |   ❌    |   ❌    |
+| `academic:view` (ดูข้อมูลปีการศึกษา/หลักสูตร/ห้องสอบ) |  ✅   |       ✅       |   ✅    |   ✅    |
+| `profile:view_self` / `profile:update_self`           |  ✅   |       ✅       |   ✅    |   ✅    |
 
 > 🛡️ **การปิดรับสมัครทั่วไป (Self-signup Disabled):**
 > ปิดฟังก์ชันการลงทะเบียนทั่วไปใน Phase 1 เพื่อป้องกันไม่ให้ผู้ใช้ลงทะเบียนตนเองเป็น ADMIN หรือ ACADEMIC_STAFF
@@ -42,12 +45,14 @@
 บันทึกประวัติการ Migrate ใน `prisma/migrations/20261109084615_init_auth_and_academic_master_data`:
 
 ### ตารางการยืนยันตัวตน (Better Auth)
+
 - `user`: ตารางผู้ใช้งาน (id, name, email, role, banned, banReason, isActive)
 - `session`: ข้อมูล Session การล็อกอิน (token, expiresAt, ipAddress, userAgent)
 - `account`: ข้อมูลผู้ให้บริการ Auth และรหัสผ่านที่เข้ารหัสปลอดภัย
 - `verification`: ข้อมูลโทเคนยืนยันตัวตน
 
 ### ตารางข้อมูลหลักวิชาการ (Academic Master Data)
+
 - `academic_year`: ปีการศึกษา (id, yearLabel `UNIQUE`, isActive)
 - `academic_term`: ภาคการศึกษา (id, academicYearId, termCode, nameTh, isActive) พร้อม Unique Constraint `(academicYearId, termCode)`
 - `academic_program`: หลักสูตรการศึกษา (id, code `UNIQUE`, nameTh, nameEn, degree, isActive)
@@ -60,9 +65,11 @@
 ## 4. กลไกเริ่มต้นระบบสำหรับผู้ดูแลระบบ (First Admin Bootstrap)
 
 จัดทำสคริปต์แบบระบุเจาะจง `scripts/bootstrap-admin.ts`:
+
 ```bash
 pnpm exec tsx --env-file=.env.local scripts/bootstrap-admin.ts <email> <password> [name]
 ```
+
 - ไม่อนุญาตให้รันซ้ำหากมีอีเมลนี้อยู่ในระบบแล้ว (Reject duplicate bootstrap)
 - ใช้งานผ่าน Better Auth API เพื่อเข้ารหัสผ่านอย่างถูกต้อง ไม่ใช่การเขียนข้อมูลตรง
 
