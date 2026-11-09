@@ -70,7 +70,7 @@ describe("Calendar Service & Bangkok Timezone Tests", () => {
         },
       });
 
-      facultyUser = await prisma.user.create({
+      const fac1 = await prisma.user.create({
         data: {
           id: `cal-test-fac-1-${Date.now()}`,
           name: "Dr. Cal Faculty 1",
@@ -85,8 +85,9 @@ describe("Calendar Service & Bangkok Timezone Tests", () => {
         },
         include: { facultyProfile: true },
       });
+      facultyUser = fac1 as { id: string; facultyProfile: { id: string } };
 
-      otherFacultyUser = await prisma.user.create({
+      const fac2 = await prisma.user.create({
         data: {
           id: `cal-test-fac-2-${Date.now()}`,
           name: "Dr. Cal Faculty 2",
@@ -101,6 +102,7 @@ describe("Calendar Service & Bangkok Timezone Tests", () => {
         },
         include: { facultyProfile: true },
       });
+      otherFacultyUser = fac2 as { id: string; facultyProfile: { id: string } };
 
       staffUser = await prisma.user.create({
         data: {
@@ -112,23 +114,33 @@ describe("Calendar Service & Bangkok Timezone Tests", () => {
       });
 
       // Fetch or create master data
-      const year = await prisma.academicYear.findFirst() || await prisma.academicYear.create({
-        data: { yearLabel: `2569-${Date.now()}` },
-      });
+      const year =
+        (await prisma.academicYear.findFirst()) ||
+        (await prisma.academicYear.create({
+          data: { yearLabel: `2569-${Date.now()}` },
+        }));
 
-      term = await prisma.academicTerm.findFirst() || await prisma.academicTerm.create({
-        data: {
-          academicYearId: year.id,
-          termCode: "1",
-          nameTh: "ภาคการศึกษาที่ 1",
-          startDate: new Date("2026-08-01"),
-          endDate: new Date("2026-12-31"),
-        },
-      });
+      term =
+        (await prisma.academicTerm.findFirst()) ||
+        (await prisma.academicTerm.create({
+          data: {
+            academicYearId: year.id,
+            termCode: "1",
+            nameTh: "ภาคการศึกษาที่ 1",
+            startDate: new Date("2026-08-01"),
+            endDate: new Date("2026-12-31"),
+          },
+        }));
 
-      program = await prisma.academicProgram.findFirst() || await prisma.academicProgram.create({
-        data: { code: `CP-CAL-${Date.now()}`, nameTh: "วิศวกรรมคอมพิวเตอร์", degree: "ปริญญาตรี" },
-      });
+      program =
+        (await prisma.academicProgram.findFirst()) ||
+        (await prisma.academicProgram.create({
+          data: {
+            code: `CP-CAL-${Date.now()}`,
+            nameTh: "วิศวกรรมคอมพิวเตอร์",
+            degree: "ปริญญาตรี",
+          },
+        }));
 
       room = await prisma.examinationRoom.create({
         data: {
@@ -214,25 +226,41 @@ describe("Calendar Service & Bangkok Timezone Tests", () => {
 
     afterAll(async () => {
       // Clean up test bookings and records
-      if (bookingA) await prisma.examinationBooking.deleteMany({ where: { id: bookingA.id } });
-      if (bookingB) await prisma.examinationBooking.deleteMany({ where: { id: bookingB.id } });
+      if (bookingA)
+        await prisma.examinationBooking.deleteMany({
+          where: { id: bookingA.id },
+        });
+      if (bookingB)
+        await prisma.examinationBooking.deleteMany({
+          where: { id: bookingB.id },
+        });
       if (projectA) {
-        await prisma.advisorRequest.deleteMany({ where: { projectId: projectA.id } });
+        await prisma.advisorRequest.deleteMany({
+          where: { projectId: projectA.id },
+        });
         await prisma.academicProject.delete({ where: { id: projectA.id } });
       }
       if (projectB) {
-        await prisma.advisorRequest.deleteMany({ where: { projectId: projectB.id } });
+        await prisma.advisorRequest.deleteMany({
+          where: { projectId: projectB.id },
+        });
         await prisma.academicProject.delete({ where: { id: projectB.id } });
       }
       if (room) await prisma.examinationRoom.delete({ where: { id: room.id } });
-      if (studentUser) await prisma.user.delete({ where: { id: studentUser.id } });
-      if (otherStudentUser) await prisma.user.delete({ where: { id: otherStudentUser.id } });
+      if (studentUser)
+        await prisma.user.delete({ where: { id: studentUser.id } });
+      if (otherStudentUser)
+        await prisma.user.delete({ where: { id: otherStudentUser.id } });
       if (facultyUser) {
-        await prisma.facultyProfile.deleteMany({ where: { userId: facultyUser.id } });
+        await prisma.facultyProfile.deleteMany({
+          where: { userId: facultyUser.id },
+        });
         await prisma.user.delete({ where: { id: facultyUser.id } });
       }
       if (otherFacultyUser) {
-        await prisma.facultyProfile.deleteMany({ where: { userId: otherFacultyUser.id } });
+        await prisma.facultyProfile.deleteMany({
+          where: { userId: otherFacultyUser.id },
+        });
         await prisma.user.delete({ where: { id: otherFacultyUser.id } });
       }
       if (staffUser) await prisma.user.delete({ where: { id: staffUser.id } });
@@ -352,10 +380,14 @@ describe("Calendar Service & Bangkok Timezone Tests", () => {
 
     it("8. Academic staff sees all institutional bookings", async () => {
       // staffUser should see both bookingA and bookingB
-      const staffData = await getCalendarBookings(staffUser.id, "ACADEMIC_STAFF", {
-        year: 2026,
-        month: 12,
-      });
+      const staffData = await getCalendarBookings(
+        staffUser.id,
+        "ACADEMIC_STAFF",
+        {
+          year: 2026,
+          month: 12,
+        }
+      );
       expect(staffData.bookings.some((b) => b.id === bookingA.id)).toBe(true);
       expect(staffData.bookings.some((b) => b.id === bookingB.id)).toBe(true);
     });

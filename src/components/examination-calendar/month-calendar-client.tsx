@@ -50,9 +50,7 @@ interface MonthCalendarClientProps {
   currentUserId?: string;
 }
 
-export function MonthCalendarClient({
-  initialData,
-}: MonthCalendarClientProps) {
+export function MonthCalendarClient({ initialData }: MonthCalendarClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -75,7 +73,8 @@ export function MonthCalendarClient({
   const filteredBookings = React.useMemo(() => {
     return bookings.filter((b) => {
       if (statusFilter !== "ALL" && b.status !== statusFilter) return false;
-      if (roomFilter !== "ALL" && b.examinationRoomId !== roomFilter) return false;
+      if (roomFilter !== "ALL" && b.examinationRoomId !== roomFilter)
+        return false;
       return true;
     });
   }, [bookings, statusFilter, roomFilter]);
@@ -113,8 +112,11 @@ export function MonthCalendarClient({
 
     // Previous month padding
     const prevMonthLastDate = new Date(year, month - 1, 0).getDate();
-    const prevDays: { dayNum: number; dateKey: string; isCurrentMonth: boolean }[] =
-      [];
+    const prevDays: {
+      dayNum: number;
+      dateKey: string;
+      isCurrentMonth: boolean;
+    }[] = [];
     for (let i = firstDayIndex - 1; i >= 0; i--) {
       const dayNum = prevMonthLastDate - i;
       const prevM = month === 1 ? 12 : month - 1;
@@ -124,8 +126,11 @@ export function MonthCalendarClient({
     }
 
     // Current month days
-    const currentDays: { dayNum: number; dateKey: string; isCurrentMonth: boolean }[] =
-      [];
+    const currentDays: {
+      dayNum: number;
+      dateKey: string;
+      isCurrentMonth: boolean;
+    }[] = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       currentDays.push({ dayNum: d, dateKey, isCurrentMonth: true });
@@ -134,8 +139,11 @@ export function MonthCalendarClient({
     // Next month padding to fill complete weeks (multiple of 7)
     const totalFilled = prevDays.length + currentDays.length;
     const remaining = totalFilled % 7 === 0 ? 0 : 7 - (totalFilled % 7);
-    const nextDays: { dayNum: number; dateKey: string; isCurrentMonth: boolean }[] =
-      [];
+    const nextDays: {
+      dayNum: number;
+      dateKey: string;
+      isCurrentMonth: boolean;
+    }[] = [];
     for (let d = 1; d <= remaining; d++) {
       const nextM = month === 12 ? 1 : month + 1;
       const nextY = month === 12 ? year + 1 : year;
@@ -192,7 +200,15 @@ export function MonthCalendarClient({
     router.push(`/examination-calendar?${query.toString()}`);
   };
 
-  const dayHeadersTh = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
+  const dayHeadersTh = [
+    "จันทร์",
+    "อังคาร",
+    "พุธ",
+    "พฤหัสบดี",
+    "ศุกร์",
+    "เสาร์",
+    "อาทิตย์",
+  ];
 
   // Format selected date in Thai
   const selectedDateObj = new Date(`${selectedDateKey}T12:00:00+07:00`);
@@ -201,8 +217,12 @@ export function MonthCalendarClient({
     : selectedDateKey;
 
   const totalMonthExams = filteredBookings.length;
-  const confirmedMonthCount = filteredBookings.filter((b) => b.status === "CONFIRMED").length;
-  const pendingMonthCount = filteredBookings.filter((b) => b.status === "PENDING_REVIEW").length;
+  const confirmedMonthCount = filteredBookings.filter(
+    (b) => b.status === "CONFIRMED"
+  ).length;
+  const pendingMonthCount = filteredBookings.filter(
+    (b) => b.status === "PENDING_REVIEW"
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -266,15 +286,22 @@ export function MonthCalendarClient({
       {/* Summary KPI Strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="p-3">
-          <div className="text-muted-foreground text-xs font-medium">เดือนปัจจุบัน</div>
+          <div className="text-muted-foreground text-xs font-medium">
+            เดือนปัจจุบัน
+          </div>
           <div className="text-foreground mt-1 text-lg font-bold sm:text-xl">
             {monthLabelTh}
           </div>
         </Card>
         <Card className="p-3">
-          <div className="text-muted-foreground text-xs font-medium">การสอบทั้งหมดในเดือน</div>
+          <div className="text-muted-foreground text-xs font-medium">
+            การสอบทั้งหมดในเดือน
+          </div>
           <div className="text-foreground mt-1 text-lg font-bold sm:text-xl">
-            {totalMonthExams} <span className="text-muted-foreground text-xs font-normal">รายการ</span>
+            {totalMonthExams}{" "}
+            <span className="text-muted-foreground text-xs font-normal">
+              รายการ
+            </span>
           </div>
         </Card>
         <Card className="p-3">
@@ -283,7 +310,10 @@ export function MonthCalendarClient({
             ยืนยันกำหนดสอบแล้ว
           </div>
           <div className="text-foreground mt-1 text-lg font-bold sm:text-xl">
-            {confirmedMonthCount} <span className="text-muted-foreground text-xs font-normal">รายการ</span>
+            {confirmedMonthCount}{" "}
+            <span className="text-muted-foreground text-xs font-normal">
+              รายการ
+            </span>
           </div>
         </Card>
         <Card className="p-3">
@@ -292,7 +322,10 @@ export function MonthCalendarClient({
             รอการตรวจสอบ
           </div>
           <div className="text-foreground mt-1 text-lg font-bold sm:text-xl">
-            {pendingMonthCount} <span className="text-muted-foreground text-xs font-normal">รายการ</span>
+            {pendingMonthCount}{" "}
+            <span className="text-muted-foreground text-xs font-normal">
+              รายการ
+            </span>
           </div>
         </Card>
       </div>
@@ -316,7 +349,9 @@ export function MonthCalendarClient({
             <SelectContent>
               <SelectItem value="ALL">สถานะทั้งหมด</SelectItem>
               <SelectItem value="CONFIRMED">ยืนยันแล้ว (Confirmed)</SelectItem>
-              <SelectItem value="PENDING_REVIEW">รออนุมัติ (Pending)</SelectItem>
+              <SelectItem value="PENDING_REVIEW">
+                รออนุมัติ (Pending)
+              </SelectItem>
             </SelectContent>
           </Select>
 
@@ -404,13 +439,13 @@ export function MonthCalendarClient({
                       type="button"
                       onClick={() => setSelectedDateKey(item.dateKey)}
                       aria-label={`${item.dateKey} มีการสอบ ${dayEvents.length} รายการ`}
-                      className={`relative flex min-h-[85px] flex-col p-1.5 text-left transition-all sm:min-h-[105px] sm:p-2 focus-visible:ring-primary focus-visible:ring-2 focus-visible:outline-none ${
+                      className={`focus-visible:ring-primary relative flex min-h-[85px] flex-col p-1.5 text-left transition-all focus-visible:ring-2 focus-visible:outline-none sm:min-h-[105px] sm:p-2 ${
                         !item.isCurrentMonth
                           ? "bg-muted/10 text-muted-foreground/40"
                           : "bg-card text-foreground"
                       } ${
                         isSelected
-                          ? "ring-primary ring-inset z-10 bg-primary/5 ring-2 shadow-sm"
+                          ? "ring-primary bg-primary/5 z-10 shadow-sm ring-2 ring-inset"
                           : "hover:bg-muted/30"
                       }`}
                     >
@@ -421,8 +456,8 @@ export function MonthCalendarClient({
                             isToday
                               ? "bg-primary text-primary-foreground font-bold shadow-xs"
                               : isSelected
-                              ? "text-primary font-bold"
-                              : ""
+                                ? "text-primary font-bold"
+                                : ""
                           }`}
                         >
                           {item.dayNum}
@@ -430,7 +465,7 @@ export function MonthCalendarClient({
 
                         {/* Event count badge */}
                         {dayEvents.length > 0 && (
-                          <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.2 text-[10px] font-medium">
+                          <span className="bg-muted text-muted-foreground py-0.2 rounded-full px-1.5 text-[10px] font-medium">
                             {dayEvents.length}
                           </span>
                         )}
@@ -496,7 +531,9 @@ export function MonthCalendarClient({
                   <div className="bg-muted flex h-12 w-12 items-center justify-center rounded-full">
                     <CalendarIcon className="text-muted-foreground/60 h-6 w-6" />
                   </div>
-                  <p className="mt-3 text-sm font-medium">ไม่มีการสอบในวันที่เลือก</p>
+                  <p className="mt-3 text-sm font-medium">
+                    ไม่มีการสอบในวันที่เลือก
+                  </p>
                   <p className="text-muted-foreground/70 mt-1 max-w-[240px] text-xs">
                     ไม่มีคำขอจองสอบหรือกำหนดการสอบที่ได้รับการยืนยันสำหรับวันที่นี้
                   </p>
@@ -528,22 +565,24 @@ export function MonthCalendarClient({
                             variant={isConfirmed ? "default" : "secondary"}
                             className={`text-[10px] ${
                               isConfirmed
-                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                : "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                : "border-amber-500/30 bg-amber-500/20 text-amber-700 dark:text-amber-300"
                             }`}
                           >
                             {isConfirmed ? (
-                              <CheckCircle2 className="mr-1 h-3 w-3 inline" />
+                              <CheckCircle2 className="mr-1 inline h-3 w-3" />
                             ) : (
-                              <AlertCircle className="mr-1 h-3 w-3 inline" />
+                              <AlertCircle className="mr-1 inline h-3 w-3" />
                             )}
-                            {isConfirmed ? "ยืนยันกำหนดสอบแล้ว" : "รออนุมัติการจอง"}
+                            {isConfirmed
+                              ? "ยืนยันกำหนดสอบแล้ว"
+                              : "รออนุมัติการจอง"}
                           </Badge>
                         </div>
 
                         {/* Project title */}
                         <div>
-                          <div className="text-foreground text-sm font-semibold leading-snug">
+                          <div className="text-foreground text-sm leading-snug font-semibold">
                             {b.projectTitleTh}
                           </div>
                           {b.projectTitleEn && (
@@ -556,13 +595,16 @@ export function MonthCalendarClient({
                         {/* Room */}
                         <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
                           <MapPin className="text-primary h-3.5 w-3.5 shrink-0" />
-                          <span className="font-medium text-foreground">
+                          <span className="text-foreground font-medium">
                             {b.examinationRoomName}
                           </span>
                           {b.examinationRoomBuilding && (
                             <span className="text-xs">
                               ({b.examinationRoomBuilding}{" "}
-                              {b.examinationRoomFloor ? `ชั้น ${b.examinationRoomFloor}` : ""})
+                              {b.examinationRoomFloor
+                                ? `ชั้น ${b.examinationRoomFloor}`
+                                : ""}
+                              )
                             </span>
                           )}
                         </div>
@@ -581,7 +623,7 @@ export function MonthCalendarClient({
                         {/* Committee members */}
                         {b.committeeMembers.length > 0 && (
                           <div className="text-muted-foreground flex items-start gap-1.5 text-xs">
-                            <Users className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                            <Users className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <div>
                               กรรมการ:{" "}
                               {b.committeeMembers.map((c) => c.name).join(", ")}
@@ -590,16 +632,24 @@ export function MonthCalendarClient({
                         )}
 
                         {/* Navigation link */}
-                        <div className="pt-1 flex items-center justify-between">
+                        <div className="flex items-center justify-between pt-1">
                           {b.isMyProject || b.isMyDuty ? (
-                            <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary">
+                            <Badge
+                              variant="outline"
+                              className="bg-primary/10 text-primary text-[10px]"
+                            >
                               เกี่ยวข้องกับคุณ
                             </Badge>
                           ) : (
                             <div />
                           )}
 
-                          <Button asChild variant="ghost" size="sm" className="h-7 text-xs">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs"
+                          >
                             <Link href={`/projects/${b.projectId}`}>
                               รายละเอียดโครงงาน
                               <ExternalLink className="ml-1 h-3 w-3" />

@@ -7,21 +7,59 @@ vi.mock("@/lib/auth-guards", () => ({
   getCurrentSession: vi.fn().mockResolvedValue(null),
 }));
 
-describe("HomePage Verification", () => {
-  it("renders ThesisSlot title and Thai description correctly", async () => {
+describe("HomePage Landing Page Verification", () => {
+  it("renders ThesisSlot title and Thai academic headline correctly", async () => {
     const pageComponent = await HomePage();
     render(pageComponent);
-    expect(screen.getByText("ThesisSlot")).toBeInTheDocument();
+
+    // H1 Heading
     expect(
-      screen.getByText("ระบบจองสอบโครงงานและวิทยานิพนธ์")
+      screen.getByRole("heading", {
+        level: 1,
+        name: /จัดการการสอบโครงงานและวิทยานิพนธ์ อย่างเป็นระบบในที่เดียว/,
+      })
     ).toBeInTheDocument();
+
+    // Wordmark
+    expect(screen.getAllByText("ThesisSlot").length).toBeGreaterThan(0);
   });
 
-  it("renders Phase 1 highlights without crashing", async () => {
+  it("renders core feature sections and workflows without crashing", async () => {
     const pageComponent = await HomePage();
     render(pageComponent);
-    expect(screen.getByText("4 System Roles")).toBeInTheDocument();
-    expect(screen.getByText("Academic Master Data")).toBeInTheDocument();
-    expect(screen.getByText("Role-Based Dashboard")).toBeInTheDocument();
+
+    // Feature highlights
+    expect(
+      screen.getByRole("heading", {
+        name: "ครบทุกขั้นตอนของการจัดการสอบ",
+      })
+    ).toBeInTheDocument();
+
+    // Workflow steps
+    expect(
+      screen.getByRole("heading", {
+        name: "เริ่มต้นใช้งานได้ในไม่กี่ขั้นตอน",
+      })
+    ).toBeInTheDocument();
+
+    // Roles section
+    expect(
+      screen.getByRole("heading", {
+        name: "ออกแบบสำหรับทุกบทบาทในกระบวนการสอบ",
+      })
+    ).toBeInTheDocument();
+
+    // CTA
+    expect(
+      screen.getByRole("heading", {
+        name: "พร้อมเริ่มจัดการการสอบอย่างเป็นระบบ",
+      })
+    ).toBeInTheDocument();
+
+    // Login Link
+    const loginLinks = screen.getAllByRole("link", {
+      name: /เข้าสู่ระบบ/i,
+    });
+    expect(loginLinks.length).toBeGreaterThan(0);
   });
 });
