@@ -1,0 +1,10 @@
+// This is your Prisma 7 schema file for ThesisSlot
+// Documentation: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
