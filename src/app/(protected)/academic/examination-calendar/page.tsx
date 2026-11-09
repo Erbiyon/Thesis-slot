@@ -85,7 +85,13 @@ export default async function AcademicExaminationCalendarPage({
             มุมมองตารางสอบประจำสัปดาห์ (วันจันทร์ - วันศุกร์) แยกตามห้องสอบ
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="secondary" size="sm">
+            <Link href="/examination-calendar">
+              <CalendarDays className="mr-1 h-4 w-4" />
+              มุมมองรายเดือน
+            </Link>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link href={`/academic/examination-calendar?date=${prevWeekDate}`}>
               <ChevronLeft className="mr-1 h-4 w-4" />

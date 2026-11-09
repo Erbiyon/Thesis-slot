@@ -101,8 +101,8 @@ export function AppSidebar({ user, role }: SidebarProps) {
       roles: ["ADMIN", "ACADEMIC_STAFF"],
     },
     {
-      title: "ปฏิทินตารางสอบ",
-      href: "/academic/examination-calendar",
+      title: "ปฏิทินสอบ",
+      href: "/examination-calendar",
       icon: CalendarDays,
       roles: ["ADMIN", "ACADEMIC_STAFF", "FACULTY", "STUDENT"],
     },
