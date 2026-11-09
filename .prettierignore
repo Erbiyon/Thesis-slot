@@ -4,4 +4,7 @@ dist
 build
 pnpm-lock.yaml
 coverage
+.agents
+.gemini
+
 

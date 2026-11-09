@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { admin } from "better-auth/plugins";
 import prisma from "@/lib/prisma";
 
 export const auth = betterAuth({
@@ -8,6 +9,25 @@ export const auth = betterAuth({
   }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
-  // Note: Business role models and credentials will be configured in subsequent stages.
+  emailAndPassword: {
+    enabled: true,
+    // Disable public self-registration for Phase 1 as required
+    disableSignUp: true,
+  },
+  plugins: [
+    admin({
+      defaultRole: "STUDENT",
+      adminRole: "ADMIN",
+    }),
+  ],
+  user: {
+    additionalFields: {
+      isActive: {
+        type: "boolean",
+        required: false,
+        defaultValue: true,
+        input: false,
+      },
+    },
+  },
 });
-

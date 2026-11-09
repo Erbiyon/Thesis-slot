@@ -11,10 +11,13 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
+    "test:integration": "vitest run src/lib/db-connection.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "prisma generate",
-    "db:validate": "prisma validate"
+    "db:validate": "prisma validate",
+    "db:status": "prisma migrate status",
+    "db:test": "node --env-file=.env.local scripts/test-db.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.3",
@@ -58,6 +61,7 @@
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   },
