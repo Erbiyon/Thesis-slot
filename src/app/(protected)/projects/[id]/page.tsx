@@ -26,6 +26,7 @@ import {
   Edit,
   UserPlus,
   Send,
+  CalendarCheck,
 } from "lucide-react";
 
 export default async function ProjectDetailPage({
@@ -85,6 +86,18 @@ export default async function ProjectDetailPage({
         </div>
 
         <div className="flex items-center gap-2">
+          {project.reviewStatus === "APPROVED" && (
+            <Button
+              size="sm"
+              asChild
+              className="bg-primary text-primary-foreground gap-1.5"
+            >
+              <Link href={`/projects/${project.id}/examination-booking`}>
+                <CalendarCheck className="h-4 w-4" />
+                จองวัน-เวลาสอบ
+              </Link>
+            </Button>
+          )}
           {canEdit && (
             <>
               <Button variant="outline" size="sm" asChild className="gap-1.5">

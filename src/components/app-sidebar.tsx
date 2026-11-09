@@ -23,6 +23,9 @@ import {
   FolderGit2,
   Mail,
   ClipboardCheck,
+  ShieldCheck,
+  Clock,
+  CalendarCheck,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -71,6 +74,37 @@ export function AppSidebar({ user, role }: SidebarProps) {
       href: "/academic/project-reviews",
       icon: ClipboardCheck,
       roles: ["ADMIN", "ACADEMIC_STAFF"],
+    },
+    // Phase 3 Nav Items
+    {
+      title: "คำเชิญกรรมการสอบ",
+      href: "/faculty/committee-invitations",
+      icon: ShieldCheck,
+      roles: ["ADMIN", "FACULTY"],
+    },
+    {
+      title: "จัดการเวลาว่าง/ไม่สะดวก",
+      href: "/faculty/availability",
+      icon: Clock,
+      roles: ["ADMIN", "FACULTY"],
+    },
+    {
+      title: "แต่งตั้งกรรมการสอบ",
+      href: "/academic/examination-committees",
+      icon: ShieldCheck,
+      roles: ["ADMIN", "ACADEMIC_STAFF"],
+    },
+    {
+      title: "คำขอจองสอบ",
+      href: "/academic/examination-bookings",
+      icon: CalendarCheck,
+      roles: ["ADMIN", "ACADEMIC_STAFF"],
+    },
+    {
+      title: "ปฏิทินตารางสอบ",
+      href: "/academic/examination-calendar",
+      icon: CalendarDays,
+      roles: ["ADMIN", "ACADEMIC_STAFF", "FACULTY", "STUDENT"],
     },
     // Phase 1 Master Data
     {

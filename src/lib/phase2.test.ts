@@ -32,7 +32,7 @@ describe("Phase 2 - Academic Project Registration & Group Workflow Integration T
 
     const year = await prisma.academicYear.create({
       data: {
-        yearLabel: `25${Math.floor(Math.random() * 800 + 100)}`,
+        yearLabel: `45${Math.floor(Math.random() * 89999 + 10000)}`,
       },
     });
 

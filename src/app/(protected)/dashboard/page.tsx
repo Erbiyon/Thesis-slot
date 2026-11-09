@@ -13,7 +13,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   FolderGit2,
-  Calendar,
+  CalendarDays,
   GraduationCap,
   DoorOpen,
   Users,
@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   Mail,
   AlertCircle,
+  CalendarCheck,
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -32,24 +33,30 @@ export default async function DashboardPage() {
   // Parallel fetching without waterfalls (Vercel React Best Practices)
   const [
     programCount,
-    yearCount,
-    termCount,
     roomCount,
     userCount,
     myProjectsCount,
     submittedReviewsCount,
     pendingAdvisorRequestsCount,
     needsRevisionCount,
+    pendingCommitteeInvitesCount,
+    pendingBookingReviewsCount,
+    activeBookingsCount,
   ] = await Promise.all([
     prisma.academicProgram.count({ where: { isActive: true } }),
-    prisma.academicYear.count({ where: { isActive: true } }),
-    prisma.academicTerm.count({ where: { isActive: true } }),
     prisma.examinationRoom.count({ where: { isActive: true } }),
     role === "ADMIN" ? prisma.user.count({ where: { isActive: true } }) : null,
 
     // Student metrics
     role === "STUDENT"
-      ? prisma.academicProject.count({ where: { createdByUserId: user.id } })
+      ? prisma.academicProject.count({
+          where: {
+            OR: [
+              { createdByUserId: user.id },
+              { members: { some: { studentProfile: { userId: user.id } } } },
+            ],
+          },
+        })
       : null,
 
     // Staff metrics
@@ -76,6 +83,28 @@ export default async function DashboardPage() {
           },
         })
       : null,
+
+    // Phase 3 Faculty Committee Invitations Pending
+    role === "FACULTY"
+      ? prisma.examinationCommitteeMember.count({
+          where: {
+            facultyProfile: { userId: user.id },
+            invitationStatus: "PENDING",
+          },
+        })
+      : null,
+
+    // Phase 3 Staff Pending Booking Reviews
+    role === "ACADEMIC_STAFF" || role === "ADMIN"
+      ? prisma.examinationBooking.count({
+          where: { status: "PENDING_REVIEW" },
+        })
+      : null,
+
+    // Phase 3 Active bookings (confirmed or pending)
+    prisma.examinationBooking.count({
+      where: { status: { in: ["CONFIRMED", "PENDING_REVIEW"] } },
+    }),
   ]);
 
   const roleTitles = {
@@ -116,16 +145,16 @@ export default async function DashboardPage() {
           )}
           {role === "ACADEMIC_STAFF" && (
             <Button size="sm" asChild>
-              <Link href="/academic/project-reviews">
-                ตรวจสอบคำขอลงทะเบียน
+              <Link href="/academic/examination-bookings">
+                ตรวจสอบคำขอจองสอบ
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>
           )}
           {role === "FACULTY" && (
             <Button size="sm" asChild>
-              <Link href="/faculty/advisor-requests">
-                ดูคำขอที่ปรึกษา
+              <Link href="/faculty/committee-invitations">
+                คำเชิญกรรมการสอบ
                 <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -143,7 +172,7 @@ export default async function DashboardPage() {
 
       {/* Student Highlight Cards */}
       {role === "STUDENT" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
@@ -181,6 +210,27 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
+                ปฏิทินตารางสอบ
+              </CardTitle>
+              <CalendarDays className="text-primary h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="link"
+                className="h-auto p-0 text-base font-bold"
+                asChild
+              >
+                <Link href="/academic/examination-calendar">ดูปฏิทินรวม →</Link>
+              </Button>
+              <p className="text-muted-foreground mt-1 text-xs">
+                ตรวจสอบตารางการจัดสอบรายสัปดาห์
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
                 หลักสูตรที่เปิดรับ
               </CardTitle>
               <GraduationCap className="h-4 w-4 text-zinc-500" />
@@ -199,20 +249,20 @@ export default async function DashboardPage() {
 
       {/* Faculty Highlight Cards */}
       {role === "FACULTY" && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                คำขอที่ปรึกษาที่รอการตอบรับ
+                คำขอที่ปรึกษาที่รอตอบรับ
               </CardTitle>
-              <Clock className="h-4 w-4 text-amber-500" />
+              <Mail className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
               <div className="text-foreground text-2xl font-bold">
                 {pendingAdvisorRequestsCount}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                คำขอจากกลุ่มนักศึกษาที่รอคุณพิจารณา
+                คำขอจากกลุ่มนักศึกษาที่รอพิจารณา
               </p>
             </CardContent>
           </Card>
@@ -220,9 +270,26 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                โครงงานที่รับเป็นที่ปรึกษา
+                คำเชิญกรรมการสอบที่รอตอบรับ
               </CardTitle>
-              <FolderGit2 className="h-4 w-4 text-emerald-500" />
+              <ShieldCheck className="text-primary h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-foreground text-2xl font-bold">
+                {pendingCommitteeInvitesCount}
+              </div>
+              <p className="text-muted-foreground mt-1 text-xs">
+                คำเชิญเป็นกรรมการสอบโครงงาน
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                กำหนดเวลาว่าง / ไม่สะดวก
+              </CardTitle>
+              <Clock className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
               <Button
@@ -230,10 +297,10 @@ export default async function DashboardPage() {
                 className="h-auto p-0 text-base font-bold"
                 asChild
               >
-                <Link href="/projects">ดูรายการโครงงานทั้งหมด →</Link>
+                <Link href="/faculty/availability">จัดการช่วงเวลา →</Link>
               </Button>
               <p className="text-muted-foreground mt-1 text-xs">
-                เข้าสู่หน้ารายการโครงงานในความดูแล
+                ป้องกันไม่ให้ระบบจัดตารางสอบซ้อน
               </p>
             </CardContent>
           </Card>
@@ -241,16 +308,22 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                ห้องสอบที่พร้อมใช้
+                ปฏิทินตารางสอบ
               </CardTitle>
-              <DoorOpen className="h-4 w-4 text-zinc-500" />
+              <CalendarDays className="h-4 w-4 text-zinc-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-foreground text-2xl font-bold">
-                {roomCount}
-              </div>
+              <Button
+                variant="link"
+                className="h-auto p-0 text-base font-bold"
+                asChild
+              >
+                <Link href="/academic/examination-calendar">
+                  ดูตารางสอบรวม →
+                </Link>
+              </Button>
               <p className="text-muted-foreground mt-1 text-xs">
-                ห้องสอบที่ลงทะเบียนในระบบ
+                ตรวจสอบการจัดสอบสัปดาห์นี้
               </p>
             </CardContent>
           </Card>
@@ -263,7 +336,7 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                คำขอที่รอการตรวจสอบ
+                คำขอลงทะเบียนรอตรวจ
               </CardTitle>
               <ClipboardCheck className="h-4 w-4 text-amber-500" />
             </CardHeader>
@@ -272,7 +345,7 @@ export default async function DashboardPage() {
                 {submittedReviewsCount}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                คำขอลงทะเบียนที่ยื่นเข้ามา
+                คำขอลงทะเบียนโครงงานใหม่
               </p>
             </CardContent>
           </Card>
@@ -280,16 +353,16 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                หลักสูตรที่เปิดใช้งาน
+                คำขอจองสอบรอตรวจสอบ
               </CardTitle>
-              <GraduationCap className="h-4 w-4 text-zinc-500" />
+              <CalendarCheck className="text-primary h-4 w-4" />
             </CardHeader>
             <CardContent>
               <div className="text-foreground text-2xl font-bold">
-                {programCount}
+                {pendingBookingReviewsCount}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                หลักสูตรในระบบ
+                คำขอจองสอบที่นักศึกษายื่นเข้ามา
               </p>
             </CardContent>
           </Card>
@@ -297,16 +370,16 @@ export default async function DashboardPage() {
           <Card className="border-border shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
-                ปีการศึกษา / ภาคเรียน
+                การสอบในระบบทั้งหมด
               </CardTitle>
-              <Calendar className="h-4 w-4 text-zinc-500" />
+              <CalendarDays className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
               <div className="text-foreground text-2xl font-bold">
-                {yearCount} / {termCount}
+                {activeBookingsCount}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                ปีการศึกษา และภาคเรียนที่เปิดใช้งาน
+                รายการสอบที่ยืนยันหรือรอตรวจ
               </p>
             </CardContent>
           </Card>
@@ -323,7 +396,7 @@ export default async function DashboardPage() {
                 {roomCount}
               </div>
               <p className="text-muted-foreground mt-1 text-xs">
-                ห้องสอบที่ลงทะเบียน
+                ห้องสอบที่เปิดใช้งาน
               </p>
             </CardContent>
           </Card>
@@ -370,14 +443,14 @@ export default async function DashboardPage() {
               <div className="border-border bg-muted/20 flex flex-col justify-between rounded-lg border p-4">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <ClipboardCheck className="h-4 w-4 text-zinc-600" />
-                    ตรวจสอบคำขอลงทะเบียน
+                    <CalendarCheck className="h-4 w-4 text-zinc-600" />
+                    จัดการคำขอจองสอบ
                   </div>
                   <p className="text-foreground mt-2 text-2xl font-bold">
-                    {submittedReviewsCount}
+                    {pendingBookingReviewsCount}
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    คำขอลงทะเบียนโครงงานที่รอการพิจารณา
+                    คำขอจองสอบรอตรวจสอบ
                   </p>
                 </div>
                 <Button
@@ -386,8 +459,8 @@ export default async function DashboardPage() {
                   className="mt-4 w-full"
                   asChild
                 >
-                  <Link href="/academic/project-reviews">
-                    เข้าสู่หน้าตรวจสอบคำขอ
+                  <Link href="/academic/examination-bookings">
+                    ตรวจสอบคำขอจองสอบ
                   </Link>
                 </Button>
               </div>
@@ -420,11 +493,11 @@ export default async function DashboardPage() {
         <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <ClipboardCheck className="h-5 w-5 text-zinc-600" />
-              การจัดการข้อมูลวิชาการและการตรวจสอบโครงงาน
+              <CalendarCheck className="h-5 w-5 text-zinc-600" />
+              การจัดการข้อมูลวิชาการและการจัดสอบ
             </CardTitle>
             <CardDescription>
-              ตรวจสอบคำขอลงทะเบียนและจัดการข้อมูลพื้นฐานสำหรับการจัดสอบ
+              ตรวจสอบคำขอลงทะเบียน แต่งตั้งกรรมการ และจัดตารางสอบ
             </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
@@ -433,46 +506,50 @@ export default async function DashboardPage() {
               className="flex h-auto flex-col items-start gap-1 py-4"
               asChild
             >
+              <Link href="/academic/examination-bookings">
+                <span className="text-sm font-semibold">คำขอจองสอบ</span>
+                <span className="text-muted-foreground text-xs font-normal">
+                  รอตรวจสอบ ({pendingBookingReviewsCount})
+                </span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex h-auto flex-col items-start gap-1 py-4"
+              asChild
+            >
+              <Link href="/academic/examination-committees">
+                <span className="text-sm font-semibold">
+                  แต่งตั้งกรรมการสอบ
+                </span>
+                <span className="text-muted-foreground text-xs font-normal">
+                  จัดการคณะกรรมการสอบ
+                </span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex h-auto flex-col items-start gap-1 py-4"
+              asChild
+            >
+              <Link href="/academic/examination-calendar">
+                <span className="text-sm font-semibold">ปฏิทินตารางสอบ</span>
+                <span className="text-muted-foreground text-xs font-normal">
+                  ดูภาพรวมตารางสอบ
+                </span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="flex h-auto flex-col items-start gap-1 py-4"
+              asChild
+            >
               <Link href="/academic/project-reviews">
-                <span className="text-sm font-semibold">ตรวจสอบคำขอ</span>
+                <span className="text-sm font-semibold">
+                  ตรวจสอบคำขอลงทะเบียน
+                </span>
                 <span className="text-muted-foreground text-xs font-normal">
                   พิจารณาโครงงาน ({submittedReviewsCount})
-                </span>
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              className="flex h-auto flex-col items-start gap-1 py-4"
-              asChild
-            >
-              <Link href="/academic/programs">
-                <span className="text-sm font-semibold">หลักสูตร</span>
-                <span className="text-muted-foreground text-xs font-normal">
-                  รายชื่อหลักสูตร ({programCount})
-                </span>
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              className="flex h-auto flex-col items-start gap-1 py-4"
-              asChild
-            >
-              <Link href="/academic/terms">
-                <span className="text-sm font-semibold">ภาคการศึกษา</span>
-                <span className="text-muted-foreground text-xs font-normal">
-                  กำหนดภาคเรียนย่อย ({termCount})
-                </span>
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              className="flex h-auto flex-col items-start gap-1 py-4"
-              asChild
-            >
-              <Link href="/academic/rooms">
-                <span className="text-sm font-semibold">ห้องสอบ</span>
-                <span className="text-muted-foreground text-xs font-normal">
-                  กำหนดห้องและอาคาร ({roomCount})
                 </span>
               </Link>
             </Button>
@@ -484,26 +561,46 @@ export default async function DashboardPage() {
         <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-              <Mail className="h-5 w-5 text-zinc-600" />
-              ภารกิจอาจารย์ที่ปรึกษา (Advisor Management)
+              <ShieldCheck className="h-5 w-5 text-zinc-600" />
+              ภารกิจอาจารย์และกรรมการสอบ
             </CardTitle>
             <CardDescription>
-              ตรวจสอบคำขอจากนักศึกษาและดูรายการโครงงานในความดูแล
+              ตอบรับคำเชิญเป็นที่ปรึกษาหรือกรรมการสอบ และระบุเวลาที่ไม่สะดวก
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border-border bg-muted/20 flex flex-col items-center justify-between gap-3 rounded-lg border p-4 sm:flex-row">
-              <div>
-                <p className="text-foreground text-sm font-medium">
-                  คำขอเป็นอาจารย์ที่ปรึกษาที่รอการตอบรับ
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  มี {pendingAdvisorRequestsCount} คำขอที่รอดำเนินการ
-                </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="border-border bg-muted/20 flex flex-col items-start justify-between gap-3 rounded-lg border p-4">
+                <div>
+                  <p className="text-foreground text-sm font-medium">
+                    คำขอเป็นที่ปรึกษาที่รอการตอบรับ
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    มี {pendingAdvisorRequestsCount} คำขอที่รอดำเนินการ
+                  </p>
+                </div>
+                <Button size="sm" asChild>
+                  <Link href="/faculty/advisor-requests">
+                    พิจารณาคำขอที่ปรึกษา
+                  </Link>
+                </Button>
               </div>
-              <Button size="sm" asChild>
-                <Link href="/faculty/advisor-requests">พิจารณาคำขอ</Link>
-              </Button>
+
+              <div className="border-border bg-muted/20 flex flex-col items-start justify-between gap-3 rounded-lg border p-4">
+                <div>
+                  <p className="text-foreground text-sm font-medium">
+                    คำเชิญเป็นกรรมการสอบที่รอตอบรับ
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    มี {pendingCommitteeInvitesCount} คำเชิญที่รอดำเนินการ
+                  </p>
+                </div>
+                <Button size="sm" asChild>
+                  <Link href="/faculty/committee-invitations">
+                    พิจารณาคำเชิญกรรมการ
+                  </Link>
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
