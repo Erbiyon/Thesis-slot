@@ -38,6 +38,12 @@ model User {
   projectReviews     ProjectReview[]     @relation("ProjectReviewer")
   projectActivities  ProjectActivity[]   @relation("ProjectActor")
 
+  // Phase 3 Relations
+  assignedCommittees ExaminationCommitteeMember[] @relation("CommitteeAssigner")
+  requestedBookings  ExaminationBooking[]         @relation("BookingRequester")
+  reviewedBookings   ExaminationBooking[]         @relation("BookingReviewer")
+  bookingHistories   ExaminationBookingHistory[]  @relation("BookingHistoryActor")
+
   @@map("user")
 }
 
@@ -131,6 +137,7 @@ model AcademicTerm {
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   projects       AcademicProject[]
+  bookings       ExaminationBooking[]
 
   @@unique([academicYearId, termCode])
   @@index([academicYearId])
@@ -147,6 +154,7 @@ model ExaminationRoom {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  bookings  ExaminationBooking[]
 
   @@map("examination_room")
 }
@@ -176,6 +184,10 @@ model FacultyProfile {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   advisorRequests AdvisorRequest[]
+
+  // Phase 3 Relations
+  availabilities   FacultyAvailability[]
+  committeeMembers ExaminationCommitteeMember[]
 
   @@map("faculty_profile")
 }
@@ -239,6 +251,10 @@ model AcademicProject {
   advisorRequests AdvisorRequest[]
   reviews         ProjectReview[]
   activities      ProjectActivity[]
+
+  // Phase 3 Relations
+  committeeMembers ExaminationCommitteeMember[]
+  bookings         ExaminationBooking[]
 
   @@index([academicProgramId])
   @@index([academicTermId])
@@ -316,4 +332,141 @@ model ProjectActivity {
   @@index([projectId])
   @@index([actorUserId])
   @@map("project_activity")
+}
+
+// -----------------------------------------------------------------------------
+// Phase 3: Examination Committee, Availability & Booking Engine
+// -----------------------------------------------------------------------------
+
+enum CommitteeResponsibility {
+  CHAIR      // ประธานกรรมการสอบ
+  COMMITTEE  // กรรมการสอบ
+  ADVISOR    // อาจารย์ที่ปรึกษาหลัก
+  CO_ADVISOR // อาจารย์ที่ปรึกษาร่วม
+  EXTERNAL   // ผู้ทรงคุณวุฒิภายนอก / กรรมการพิเศษ
+}
+
+enum CommitteeInvitationStatus {
+  PENDING   // รออาจารย์ตอบรับการเป็นกรรมการ
+  ACCEPTED  // ตอบรับเป็นกรรมการสอบแล้ว
+  DECLINED  // ปฏิเสธการเป็นกรรมการ
+  CANCELLED // ยกเลิกการแต่งตั้ง
+}
+
+enum FacultyAvailabilityType {
+  AVAILABLE   // ระบุช่วงเวลาว่าง
+  UNAVAILABLE // ระบุช่วงเวลาไม่สะดวก
+}
+
+enum ExaminationBookingStatus {
+  DRAFT          // ฉบับร่างการจอง (ยังไม่ล็อกทรัพยากร)
+  PENDING_REVIEW // ยื่นคำขอจองแล้ว (ล็อกสำรองทรัพยากรชั่วคราว Provisional Hold)
+  CONFIRMED      // เจ้าหน้าที่วิชาการอนุมัติการจองแล้ว (ล็อกสมบูรณ์ Definite Hold)
+  REJECTED       // เจ้าหน้าที่วิชาการปฏิเสธคำขอ (ปลดล็อกทรัพยากร)
+  CANCELLED      // ขอยกเลิกการจองสอบ (ปลดล็อกทรัพยากร)
+}
+
+enum BookingHistoryAction {
+  SUBMIT_REQUEST      // ยื่นคำขอจองสอบ
+  CONFIRM_BOOKING     // เจ้าหน้าที่ยืนยันการจอง
+  REJECT_BOOKING      // เจ้าหน้าที่ปฏิเสธคำขอจอง
+  CANCEL_BOOKING      // ยกเลิกการจองสอบ
+  RESCHEDULE_BOOKING  // ขอเปลี่ยนแปลงวันเวลาสอบ
+}
+
+model ExaminationCommitteeMember {
+  id                 String                    @id @default(cuid())
+  projectId          String                    @db.VarChar(255)
+  project            AcademicProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  facultyProfileId   String                    @db.VarChar(255)
+  facultyProfile     FacultyProfile            @relation(fields: [facultyProfileId], references: [id], onDelete: Cascade)
+  responsibility     CommitteeResponsibility   @default(COMMITTEE)
+  invitationStatus   CommitteeInvitationStatus @default(PENDING)
+  assignedByUserId   String                    @db.VarChar(255)
+  assigner           User                      @relation("CommitteeAssigner", fields: [assignedByUserId], references: [id], onDelete: Restrict)
+  respondedAt        DateTime?
+  responseReason     String?                   @db.Text
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@unique([projectId, facultyProfileId])
+  @@index([projectId])
+  @@index([facultyProfileId])
+  @@index([invitationStatus])
+  @@map("examination_committee_member")
+}
+
+model FacultyAvailability {
+  id               String                  @id @default(cuid())
+  facultyProfileId String                  @db.VarChar(255)
+  facultyProfile   FacultyProfile          @relation(fields: [facultyProfileId], references: [id], onDelete: Cascade)
+  startAt          DateTime
+  endAt            DateTime
+  availabilityType FacultyAvailabilityType @default(AVAILABLE)
+  note             String?                 @db.VarChar(500)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  @@index([facultyProfileId])
+  @@index([startAt, endAt])
+  @@map("faculty_availability")
+}
+
+model ExaminationBooking {
+  id                  String                   @id @default(cuid())
+  projectId           String                   @db.VarChar(255)
+  project             AcademicProject          @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  examinationRoomId   String                   @db.VarChar(255)
+  examinationRoom     ExaminationRoom          @relation(fields: [examinationRoomId], references: [id], onDelete: Restrict)
+  academicTermId      String                   @db.VarChar(255)
+  academicTerm        AcademicTerm             @relation(fields: [academicTermId], references: [id], onDelete: Restrict)
+  startAt             DateTime
+  endAt               DateTime
+  status              ExaminationBookingStatus @default(PENDING_REVIEW)
+  requestedByUserId   String                   @db.VarChar(255)
+  requester           User                     @relation("BookingRequester", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  reviewedByUserId    String?                  @db.VarChar(255)
+  reviewer            User?                    @relation("BookingReviewer", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  reviewedAt          DateTime?
+  reviewReason        String?                  @db.Text
+  confirmedAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  histories           ExaminationBookingHistory[]
+
+  @@index([projectId])
+  @@index([examinationRoomId])
+  @@index([academicTermId])
+  @@index([startAt, endAt])
+  @@index([status])
+  @@map("examination_booking")
+}
+
+model ExaminationBookingHistory {
+  id             String               @id @default(cuid())
+  bookingId      String               @db.VarChar(255)
+  booking        ExaminationBooking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actorUserId    String               @db.VarChar(255)
+  actor          User                 @relation("BookingHistoryActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  action         BookingHistoryAction
+  previousStatus ExaminationBookingStatus?
+  newStatus      ExaminationBookingStatus
+  details        String?              @db.Text
+  createdAt      DateTime             @default(now())
+
+  @@index([bookingId])
+  @@index([actorUserId])
+  @@map("examination_booking_history")
+}
+
+model SchedulingLock {
+  id          String   @id @default(cuid())
+  lockKey     String   @unique @db.VarChar(191) // e.g. "room:ROOM_ID", "faculty:FACULTY_ID", "project:PROJECT_ID"
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("scheduling_lock")
 }

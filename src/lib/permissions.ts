@@ -26,7 +26,14 @@ export type Permission =
   | "project:view_own"
   | "project:edit_own"
   | "project:review"
-  | "advisor:respond";
+  | "advisor:respond"
+  // Phase 3 Permissions
+  | "committee:manage"
+  | "committee:respond"
+  | "availability:manage_own"
+  | "booking:request"
+  | "booking:review"
+  | "booking:view";
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ADMIN: [
@@ -38,6 +45,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "profile:update_self",
     "project:view_own",
     "project:review",
+    "committee:manage",
+    "booking:review",
+    "booking:view",
   ],
   ACADEMIC_STAFF: [
     "academic:manage",
@@ -45,6 +55,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "profile:view_self",
     "profile:update_self",
     "project:review",
+    "committee:manage",
+    "booking:review",
+    "booking:view",
   ],
   FACULTY: [
     "academic:view",
@@ -52,6 +65,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "profile:update_self",
     "advisor:respond",
     "project:view_own",
+    "committee:respond",
+    "availability:manage_own",
+    "booking:view",
   ],
   STUDENT: [
     "academic:view",
@@ -60,6 +76,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "project:create",
     "project:view_own",
     "project:edit_own",
+    "booking:request",
+    "booking:view",
   ],
 };
 
@@ -104,4 +122,39 @@ export const ADVISOR_REQUEST_STATUS_LABELS_TH: Record<string, string> = {
   ACCEPTED: "ตอบรับเป็นที่ปรึกษา",
   DECLINED: "ปฏิเสธคำขอ",
   CANCELLED: "ยกเลิกคำขอ",
+};
+
+// -----------------------------------------------------------------------------
+// Phase 3 Workflow Status Constants & Labels
+// -----------------------------------------------------------------------------
+
+export const COMMITTEE_RESPONSIBILITY_LABELS_TH: Record<string, string> = {
+  CHAIR: "ประธานกรรมการสอบ",
+  COMMITTEE: "กรรมการสอบ",
+  ADVISOR: "อาจารย์ที่ปรึกษาหลัก",
+  CO_ADVISOR: "อาจารย์ที่ปรึกษาร่วม",
+  EXTERNAL: "ผู้ทรงคุณวุฒิภายนอก",
+};
+
+export const COMMITTEE_INVITATION_STATUS_LABELS_TH: Record<string, string> = {
+  PENDING: "รอการตอบรับ",
+  ACCEPTED: "ตอบรับเป็นกรรมการแล้ว",
+  DECLINED: "ปฏิเสธการเป็นกรรมการ",
+  CANCELLED: "ยกเลิกการแต่งตั้ง",
+};
+
+export const EXAMINATION_BOOKING_STATUS_LABELS_TH: Record<string, string> = {
+  DRAFT: "ฉบับร่างการจอง",
+  PENDING_REVIEW: "รอการตรวจสอบและอนุมัติ",
+  CONFIRMED: "ยืนยันการจองสอบแล้ว",
+  REJECTED: "ปฏิเสธคำขอจองสอบ",
+  CANCELLED: "ยกเลิกการจองสอบแล้ว",
+};
+
+export const BOOKING_HISTORY_ACTION_LABELS_TH: Record<string, string> = {
+  SUBMIT_REQUEST: "ยื่นคำขอจองสอบ",
+  CONFIRM_BOOKING: "อนุมัติและยืนยันการจองสอบ",
+  REJECT_BOOKING: "ปฏิเสธคำขอจองสอบ",
+  CANCEL_BOOKING: "ยกเลิกการจองสอบ",
+  RESCHEDULE_BOOKING: "ขอเปลี่ยนแปลงวันเวลาสอบ",
 };
