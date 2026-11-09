@@ -10,3 +10,4 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   // Note: Business role models and credentials will be configured in subsequent stages.
 });
+
