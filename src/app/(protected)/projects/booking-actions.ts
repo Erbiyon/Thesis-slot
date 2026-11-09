@@ -158,6 +158,8 @@ export async function requestExaminationBooking(formData: FormData) {
   revalidatePath(`/projects/${validated.projectId}`);
   revalidatePath(`/projects/${validated.projectId}/examination-booking`);
   revalidatePath(`/academic/examination-bookings`);
+  revalidatePath(`/academic/examination-calendar`);
+  revalidatePath(`/examination-calendar`);
   revalidatePath(`/dashboard`);
   return newBooking.id;
 }
@@ -265,6 +267,7 @@ export async function reviewExaminationBooking(
 
   revalidatePath(`/academic/examination-bookings`);
   revalidatePath(`/academic/examination-calendar`);
+  revalidatePath(`/examination-calendar`);
   revalidatePath(`/projects/${booking.projectId}`);
   revalidatePath(`/dashboard`);
 }
@@ -385,6 +388,7 @@ export async function rescheduleExaminationBooking(
 
   revalidatePath(`/academic/examination-bookings`);
   revalidatePath(`/academic/examination-calendar`);
+  revalidatePath(`/examination-calendar`);
   revalidatePath(`/projects/${booking.projectId}`);
   revalidatePath(`/dashboard`);
 }
@@ -438,6 +442,7 @@ export async function cancelExaminationBooking(
 
   revalidatePath(`/academic/examination-bookings`);
   revalidatePath(`/academic/examination-calendar`);
+  revalidatePath(`/examination-calendar`);
   revalidatePath(`/projects/${booking.projectId}`);
   revalidatePath(`/dashboard`);
 }
