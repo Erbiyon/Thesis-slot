@@ -126,6 +126,36 @@ async function seedDevUsers() {
     console.log("Created academic term 1/2567");
   }
 
+  // Ensure default examination rooms exist
+  const defaultRooms = [
+    {
+      code: "EN-301",
+      nameTh: "ห้องสอบวิทยานิพนธ์ 301",
+      building: "อาคารวิศวกรรม 1",
+      floor: "3",
+      capacity: 12,
+      isActive: true,
+    },
+    {
+      code: "EN-302",
+      nameTh: "ห้องสอบวิทยานิพนธ์ 302",
+      building: "อาคารวิศวกรรม 1",
+      floor: "3",
+      capacity: 10,
+      isActive: true,
+    },
+  ];
+
+  for (const r of defaultRooms) {
+    const existingRoom = await prisma.examinationRoom.findUnique({
+      where: { code: r.code },
+    });
+    if (!existingRoom) {
+      await prisma.examinationRoom.create({ data: r });
+      console.log(`Created examination room ${r.code}`);
+    }
+  }
+
   await prisma.$disconnect();
 }
 
