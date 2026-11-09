@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReviewBookingDialog } from "./review-booking-dialog";
+import { CancelBookingDialog } from "@/app/(protected)/projects/[id]/examination-booking/cancel-booking-dialog";
 
 export const metadata = {
   title: "ตรวจสอบคำขอจองสอบ | ThesisSlot",
@@ -318,7 +319,7 @@ function renderBookingItem(
             )}
           </div>
 
-          {showActions && (
+          {showActions ? (
             <div className="flex shrink-0 items-center gap-2 pt-1">
               <ReviewBookingDialog
                 bookingId={booking.id}
@@ -337,6 +338,18 @@ function renderBookingItem(
                 decision="REJECTED"
               />
             </div>
+          ) : (
+            booking.status === "CONFIRMED" && (
+              <div className="flex shrink-0 items-center gap-2 pt-1">
+                <CancelBookingDialog
+                  bookingId={booking.id}
+                  projectTitle={booking.project.titleTh}
+                  roomName={booking.examinationRoom.nameTh}
+                  dateTimeDisplay={`${dateFormatted} เวลา ${timeFormatted}`}
+                  isStaff={true}
+                />
+              </div>
+            )
           )}
         </div>
 
