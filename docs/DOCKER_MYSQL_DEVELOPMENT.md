@@ -19,12 +19,14 @@
 ระบบแบ่งฐานข้อมูลออกเป็น 2 ส่วนอย่างเป็นอิสระต่อกัน เพื่อความปลอดภัยและความเสถียรของข้อมูล:
 
 ### 2.1 ฐานข้อมูลสำหรับการพัฒนา (Development Database)
+
 - **Database Name:** `thesis_slot_dev`
 - **Character Set / Collation:** `utf8mb4` / `utf8mb4_unicode_ci`
 - **Dedicated User:** `thesis_dev`
 - **วัตถุประสงค์:** รองรับการพัฒนาฟีเจอร์, Local Development และการรัน Next.js (`pnpm dev`)
 
 ### 2.2 ฐานข้อมูลสำหรับการทดสอบอัตโนมัติ (Automated Testing Database)
+
 - **Database Name:** `thesis_slot_test`
 - **Character Set / Collation:** `utf8mb4` / `utf8mb4_unicode_ci`
 - **Dedicated User:** `thesis_test`
@@ -38,7 +40,9 @@
 ## 3. การกำหนดค่าสภาพแวดล้อม (Environment Configuration)
 
 ### 3.1 Local Development (`.env.local`)
+
 ไฟล์ `.env.local` ถูกกำหนดให้อยู่ใน `.gitignore` ไม่ถูก Commit ขึ้น Git:
+
 ```env
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 DATABASE_HOST="127.0.0.1"
@@ -51,7 +55,9 @@ BETTER_AUTH_URL="http://localhost:3000"
 ```
 
 ### 3.2 Automated Testing (`.env.test`)
+
 ไฟล์ `.env.test` ถูกกำหนดให้อยู่ใน `.gitignore` เช่นกัน:
+
 ```env
 NODE_ENV="test"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -69,9 +75,11 @@ BETTER_AUTH_URL="http://localhost:3000"
 ## 4. กลไกความปลอดภัยในการทดสอบ (Test Database Isolation Guard)
 
 จัดทำ Safety Guard Function ใน `src/lib/db-safety.ts`:
+
 ```typescript
 assertTestDatabase();
 ```
+
 - ตรวจสอบ `DATABASE_URL` ก่อนรันคำสั่งทดสอบฐานข้อมูลทุกครั้ง
 - หาก URL ชี้ไปที่ `thesis_slot_dev`, `timetable_db`, `timetable_e2e` หรือฐานข้อมูลที่ไม่ได้ลงท้ายด้วย `thesis_slot_test` ระบบจะโยนข้อผิดพลาด `[DatabaseSafetyError]` และยกเลิกการทำงานทันที (Fail Closed) ป้องกันไม่ให้การรัน Test ทำลายหรือแก้ไขข้อมูลใน Development เด็ดขาด
 
@@ -122,4 +130,3 @@ assertTestDatabase();
 - **Playwright Smoke Test:** ผ่าน 1/1 test
 - **TypeScript & ESLint:** ผ่านการตรวจสอบ 100% ไม่มีข้อผิดพลาด
 - **Production Build (`pnpm run build`):** คอมไพล์ผ่านสมบูรณ์
-

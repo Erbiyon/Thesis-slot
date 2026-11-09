@@ -8,3 +8,163 @@ generator client {
 datasource db {
   provider = "mysql"
 }
+
+// -----------------------------------------------------------------------------
+// Authentication Models (Better Auth + Admin Plugin)
+// -----------------------------------------------------------------------------
+
+model User {
+  id             String          @id @default(cuid())
+  name           String          @db.VarChar(255)
+  email          String          @unique @db.VarChar(255)
+  emailVerified  Boolean         @default(false)
+  image          String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  role           String?         @default("STUDENT") @db.VarChar(50)
+  banned         Boolean?        @default(false)
+  banReason      String?         @db.Text
+  banExpires     DateTime?
+  isActive       Boolean         @default(true)
+  sessions       Session[]
+  accounts       Account[]
+  studentProfile StudentProfile?
+  facultyProfile FacultyProfile?
+
+  @@map("user")
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  expiresAt      DateTime
+  token          String   @unique @db.VarChar(255)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?  @db.VarChar(45)
+  userAgent      String?  @db.Text
+  userId         String   @db.VarChar(255)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?  @db.VarChar(255)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String    @db.VarChar(255)
+  providerId            String    @db.VarChar(50)
+  userId                String    @db.VarChar(255)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String   @db.VarChar(255)
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// -----------------------------------------------------------------------------
+// Academic Master Data Models (Phase 1)
+// -----------------------------------------------------------------------------
+
+model AcademicProgram {
+  id              String           @id @default(cuid())
+  code            String           @unique @db.VarChar(50)
+  nameTh          String           @db.VarChar(255)
+  nameEn          String?          @db.VarChar(255)
+  degree          String?          @db.VarChar(100)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  studentProfiles StudentProfile[]
+
+  @@map("academic_program")
+}
+
+model AcademicYear {
+  id        String         @id @default(cuid())
+  yearLabel String         @unique @db.VarChar(20) // e.g. "2567", "2024"
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  terms     AcademicTerm[]
+
+  @@map("academic_year")
+}
+
+model AcademicTerm {
+  id             String       @id @default(cuid())
+  academicYearId String       @db.VarChar(255)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  termCode       String       @db.VarChar(10) // e.g. "1", "2", "3" (summer)
+  nameTh         String       @db.VarChar(100) // e.g. "ภาคการศึกษาที่ 1"
+  startDate      DateTime?    @db.Date
+  endDate        DateTime?    @db.Date
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([academicYearId, termCode])
+  @@index([academicYearId])
+  @@map("academic_term")
+}
+
+model ExaminationRoom {
+  id        String   @id @default(cuid())
+  code      String   @unique @db.VarChar(50) // e.g. "EN-401"
+  nameTh    String   @db.VarChar(255)
+  building  String?  @db.VarChar(255)
+  floor     String?  @db.VarChar(50)
+  capacity  Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("examination_room")
+}
+
+model StudentProfile {
+  id                String           @id @default(cuid())
+  userId            String           @unique @db.VarChar(255)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentCode       String           @unique @db.VarChar(50)
+  academicProgramId String?          @db.VarChar(255)
+  academicProgram   AcademicProgram? @relation(fields: [academicProgramId], references: [id], onDelete: SetNull)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([academicProgramId])
+  @@map("student_profile")
+}
+
+model FacultyProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique @db.VarChar(255)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffCode  String?  @unique @db.VarChar(50)
+  department String?  @db.VarChar(255)
+  titleTh    String?  @db.VarChar(100) // e.g. "ผศ.ดร.", "อ."
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("faculty_profile")
+}
