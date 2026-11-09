@@ -118,7 +118,7 @@ test.describe("Phase 4 — End-to-End Examination Booking Integration Workflow",
     await expect(staffPage).toHaveURL(/.*academic\/project-reviews/);
 
     // -------------------------------------------------------------
-    // Step 5: Staff navigates to Examination Committees & Bookings
+    // Step 5: Staff verifies Examination Committees & Bookings workspaces
     // -------------------------------------------------------------
     await staffPage.goto("/academic/examination-committees");
     await expect(
@@ -133,7 +133,7 @@ test.describe("Phase 4 — End-to-End Examination Booking Integration Workflow",
     ).toBeVisible();
 
     // -------------------------------------------------------------
-    // Step 6: Student navigates to examination booking wizard
+    // Step 6: Student walks through examination booking wizard
     // -------------------------------------------------------------
     await studentPage.goto(`/projects/${projectId}`);
     const bookingLink = studentPage.getByRole("link", {
@@ -148,14 +148,98 @@ test.describe("Phase 4 — End-to-End Examination Booking Integration Workflow",
       })
     ).toBeVisible();
 
+    // Step 6.1: Click Next to go to Date/Slot selection
+    const nextBtnStep1 = studentPage.getByRole("button", {
+      name: /ถัดไป: เลือกวันและห้องสอบ/,
+    });
+    await expect(nextBtnStep1).toBeVisible();
+    await nextBtnStep1.click();
+
+    // Step 6.2: Pick a date
+    const examDateInput = studentPage.locator("#examDate");
+    await expect(examDateInput).toBeVisible();
+    await examDateInput.fill("2026-12-25");
+
+    // Wait for candidate slot cards to appear
+    const availableSlotCard = studentPage.getByText("ว่างสำหรับจอง").first();
+    await expect(availableSlotCard).toBeVisible({ timeout: 10000 });
+    await availableSlotCard.click();
+
+    // Step 6.3: Click Next to Confirmation
+    const nextBtnStep2 = studentPage.getByRole("button", {
+      name: /ถัดไป: ตรวจสอบและยืนยัน/,
+    });
+    await expect(nextBtnStep2).toBeVisible();
+    await nextBtnStep2.click();
+
+    // Step 6.4: Confirm and Submit Booking Request
+    const submitBookingBtn = studentPage.getByRole("button", {
+      name: /ยืนยันการยื่นคำขอจองสอบ/,
+    });
+    await expect(submitBookingBtn).toBeVisible();
+    await submitBookingBtn.click();
+
+    // Expect status badge indicating Pending Review (Provisional Hold active)
+    await expect(
+      studentPage.getByText(/รอการตรวจสอบ|รอเจ้าหน้าที่ตรวจสอบ/).first()
+    ).toBeVisible({ timeout: 10000 });
+
     // -------------------------------------------------------------
-    // Step 7: Calendar overview inspection
+    // Step 7: Academic Staff reviews and confirms the booking
     // -------------------------------------------------------------
+    await staffPage.goto("/academic/examination-bookings");
+    await expect(staffPage.getByText(projectTitle)).toBeVisible();
+
+    const confirmBtn = staffPage
+      .getByRole("button", { name: "ยืนยันการจอง" })
+      .first();
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
+
+    // Confirm in dialog
+    const modalConfirmBtn = staffPage
+      .getByRole("button", { name: "ยืนยันการจอง" })
+      .last();
+    await modalConfirmBtn.click();
+
+    // Switch to confirmed tab or check confirmed counter
+    await staffPage.getByRole("tab", { name: /ยืนยันแล้ว/ }).click();
+    await expect(staffPage.getByText(projectTitle)).toBeVisible();
+
+    // -------------------------------------------------------------
+    // Step 8: Student and Faculty see confirmed schedule & Calendar
+    // -------------------------------------------------------------
+    await studentPage.goto(`/projects/${projectId}/examination-booking`);
+    await expect(studentPage.getByText("ยืนยันการจองสอบแล้ว")).toBeVisible();
+
     await studentPage.goto("/academic/examination-calendar");
     await expect(
       studentPage.getByRole("heading", {
         name: "ปฏิทินตารางสอบวิทยานิพนธ์และโครงงาน",
       })
     ).toBeVisible();
+
+    // -------------------------------------------------------------
+    // Step 9: Authorized Staff cancels booking to release resources
+    // -------------------------------------------------------------
+    await staffPage.goto("/academic/examination-bookings?tab=confirmed");
+    const cancelBtn = staffPage
+      .getByRole("button", { name: "ยกเลิกกำหนดการสอบ" })
+      .first();
+    await expect(cancelBtn).toBeVisible();
+    await cancelBtn.click();
+
+    await staffPage
+      .getByLabel(/เหตุผลการขอยกเลิก/)
+      .fill("ยกเลิกผ่านการทดสอบ E2E เพื่อคืนสิทธิ์ห้องสอบ");
+    await staffPage.getByRole("button", { name: "ยืนยันการยกเลิก" }).click();
+
+    // Verify hold released in rejected/cancelled tab
+    await staffPage.getByRole("tab", { name: /ปฏิเสธ \/ ยกเลิก/ }).click();
+    await expect(staffPage.getByText(projectTitle)).toBeVisible();
+
+    await studentContext.close();
+    await facultyContext.close();
+    await staffContext.close();
   });
 });
