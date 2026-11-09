@@ -8,6 +8,8 @@ import {
   EXAMINATION_BOOKING_STATUS_LABELS_TH,
   BOOKING_HISTORY_ACTION_LABELS_TH,
 } from "@/lib/permissions";
+import { CancelBookingDialog } from "./cancel-booking-dialog";
+import { RescheduleBookingDialog } from "./reschedule-booking-dialog";
 import { CalendarDays, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default async function ExaminationBookingPage({
@@ -115,6 +117,27 @@ export default async function ExaminationBookingPage({
                   )}
                 </span>
               </div>
+
+              {isLeader && (
+                <div className="flex items-center gap-2">
+                  <RescheduleBookingDialog
+                    bookingId={activeBooking.id}
+                    projectId={project.id}
+                    academicTermId={project.academicTermId}
+                    projectTitle={project.titleTh}
+                    currentRoomName={activeBooking.examinationRoom.nameTh}
+                    currentDateTimeDisplay={`${new Date(activeBooking.startAt).toLocaleDateString("th-TH")} (${new Date(activeBooking.startAt).toLocaleTimeString("th-TH", { timeStyle: "short" })} - ${new Date(activeBooking.endAt).toLocaleTimeString("th-TH", { timeStyle: "short" })})`}
+                    isStaff={false}
+                  />
+                  <CancelBookingDialog
+                    bookingId={activeBooking.id}
+                    projectTitle={project.titleTh}
+                    roomName={activeBooking.examinationRoom.nameTh}
+                    dateTimeDisplay={`${new Date(activeBooking.startAt).toLocaleDateString("th-TH")} (${new Date(activeBooking.startAt).toLocaleTimeString("th-TH", { timeStyle: "short" })} - ${new Date(activeBooking.endAt).toLocaleTimeString("th-TH", { timeStyle: "short" })})`}
+                    isStaff={false}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="bg-muted/20 grid grid-cols-1 gap-4 rounded-lg border p-4 text-sm sm:grid-cols-2">
